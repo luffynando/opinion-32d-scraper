@@ -70,7 +70,8 @@ final readonly class Scraper
         }
     }
 
-    public function obtainPdfBase64(): ?string {
+    public function obtainPdfBase64(): ?string
+    {
         $this->browserClient->waitFor('iframe[title="pdfReporteOpinion"]', 120);
         try {
             $iframeSRC = $this->browserClient->getCrawler()->filter('iframe[title="pdfReporteOpinion"]')->attr('src');
