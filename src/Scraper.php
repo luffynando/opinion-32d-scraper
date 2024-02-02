@@ -8,11 +8,11 @@ use Facebook\WebDriver\Exception\NoSuchElementException;
 use Facebook\WebDriver\Exception\TimeoutException;
 use PhpCfdi\ImageCaptchaResolver\CaptchaImage;
 use PhpCfdi\ImageCaptchaResolver\CaptchaResolverInterface;
-use PhpCfdi\Opinion32dScraper\Contracts\BrowserClientInterface;
 use PhpCfdi\Opinion32dScraper\Exceptions\InvalidCaptchaException;
 use PhpCfdi\Opinion32dScraper\Exceptions\InvalidCredentialsException;
 use PhpCfdi\Opinion32dScraper\Exceptions\PdfDownloadException;
 use PhpCfdi\Opinion32dScraper\Exceptions\SatScraperException;
+use Symfony\Component\Panther\Client;
 use Throwable;
 
 final readonly class Scraper
@@ -20,8 +20,8 @@ final readonly class Scraper
     public function __construct(
         private Credentials $credentials,
         private CaptchaResolverInterface $captchaResolver,
-        private BrowserClientInterface $browserClient,
-        private int $timeout = 30
+        private Client $browserClient,
+        private int $timeout = 60
     ) {}
 
     /**
@@ -59,7 +59,7 @@ final readonly class Scraper
         ]);
 
         $this->browserClient->submit($form);
-
+        $this->browserClient->refreshCrawler();
         $html = $this->browserClient->getCrawler()->html();
         if (str_contains($html, 'Captcha no válido')) {
             throw new InvalidCaptchaException('The provided captcha is invalid');
@@ -72,7 +72,7 @@ final readonly class Scraper
 
     public function obtainPdfBase64(): ?string
     {
-        $this->browserClient->waitFor('iframe[title="pdfReporteOpinion"]', 120);
+        $this->browserClient->waitFor('iframe[title="pdfReporteOpinion"]', $this->timeout);
         try {
             $iframeSRC = $this->browserClient->getCrawler()->filter('iframe[title="pdfReporteOpinion"]')->attr('src');
         } catch (Throwable $exception) {
@@ -94,7 +94,7 @@ final readonly class Scraper
 
     public function logout(): void
     {
-        $this->browserClient->waitFor('#navbarTogglerDemo03');
+        $this->browserClient->waitFor('#navbarTogglerDemo03', $this->timeout);
         $logoutLink = $this->browserClient->getCrawler()->selectLink('Cerrar sesión')->link();
         $this->browserClient->get($logoutLink->getUri());
     }
