@@ -70,11 +70,8 @@ final readonly class Scraper
         }
     }
 
-    public function retrievePdf(): ?string
-    {
-        $this->login();
-        $this->browserClient->waitFor('iframe[title="pdfReporteOpinion"]');
-
+    public function obtainPdfBase64(): ?string {
+        $this->browserClient->waitFor('iframe[title="pdfReporteOpinion"]', 120);
         try {
             $iframeSRC = $this->browserClient->getCrawler()->filter('iframe[title="pdfReporteOpinion"]')->attr('src');
         } catch (Throwable $exception) {
@@ -83,15 +80,21 @@ final readonly class Scraper
 
         // TODO: quitar esta linea cuando ya no lo descargue 2 veces
         @unlink('download.pdf');
+        return $iframeSRC;
+    }
 
+    public function retrievePdf(): ?string
+    {
+        $this->login();
+        $iframeSRC = $this->obtainPdfBase64();
         $this->logout();
-
         return $iframeSRC;
     }
 
     public function logout(): void
     {
-        $this->browserClient->waitFor('#urlImageHeader');
-        $this->browserClient->getCrawler()->selectLink('Cerrar sesión')->click();
+        $this->browserClient->waitFor('#navbarTogglerDemo03');
+        $logoutLink = $this->browserClient->getCrawler()->selectLink('Cerrar sesión')->link();
+        $this->browserClient->get($logoutLink->getUri());
     }
 }
